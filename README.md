@@ -1,7 +1,7 @@
 <div align="center">
 
 
-<h3 align="center">Backend for Curi</h3>
+<h3 align="center">Curi Auth Server</h3>
 
  
 </div>
@@ -11,15 +11,24 @@
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/RIDEAT/curi-backend.git
+   git clone https://github.com/RIDEAT/curi-auth.git
    ```
 2. Move to it
    ```sh
-   cd curi_backend
+   cd curi-auth
    ```
 3. Make jwt-secret in src/main/resources/application-jwt.properties 
    ```sh
-   echo 'jwt.secret = your own secret key' >> application-jwt.properties
+   echo 'jwt.authSecretKey = your own secret key' >> application-jwt.properties
+   ```
+   ```sh
+   echo 'jwt.refreshSecretKey = your own secret key' >> application-jwt.properties
+   ```
+   ```sh
+   echo 'jwt.authExpiredMs = your own secret key' >> application-jwt.properties
+   ```
+   ```sh
+   echo 'jwt.refreshExpiredMs = your own secret key' >> application-jwt.properties
    ```
 4. Make  src/main/resources/serviceAccountkey.json to connect firebase
    
