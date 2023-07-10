@@ -8,6 +8,12 @@ import com.auth.curi.firebase.FirebaseAuthentication;
 import com.auth.curi.security.dto.TokenDto;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,15 +35,25 @@ import java.util.Map;
 @Slf4j
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Tag(name = "Auth Server", description = "Curi-Auth API Document")
 public class AuthController {
 
     private final AuthService authService;
 
     // firebase access token 이 valid 하면, auth 토큰과 refresh 토큰 발급
     @GetMapping("/authorize")
+    @Operation(summary = "firebase access token 이 valid 하면, auth 토큰과 refresh 토큰 발급")
+    @SecurityRequirement(name = "firebase-access-token")
     public ResponseEntity authorize(HttpServletRequest request, HttpServletResponse response){
         try {
-            String accessToken = request.getHeader("Authentication");
+            String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+            if (authorization == null || !authorization.startsWith("Bearer ")) {
+                log.error("authorization 은 Bearer로 시작해야 합니다. ", authorization);
+                throw new CuriException(HttpStatus.BAD_REQUEST, ErrorType.NO_BEARER_AUTH);
+            }
+
+            String accessToken = authorization.split(" ")[1];
+
             log.info("accessToken: {}", accessToken);
             // Access Token 검증
             FirebaseToken decodedToken = FirebaseAuthentication.verifyAccessToken(accessToken);
@@ -95,6 +111,17 @@ public class AuthController {
     // auth 토큰이 틀리고 refresh 토큰이 틀린 경우, 실패
 
     @GetMapping("/verify")
+    @Operation(
+            summary = "auth와 refresh 토큰을 검증합니다. ",
+            parameters = {
+                    @Parameter(
+                            name = "refreshToken",
+                            in = ParameterIn.COOKIE,
+                            schema = @Schema(implementation = String.class)
+                    )
+            }
+    )
+    @SecurityRequirement(name = "Auth-token")
     public ResponseEntity verify(HttpServletRequest request, HttpServletResponse response) {
         try {
             TokenDto tokenFromRequest = getTokenDto(request);
@@ -134,6 +161,15 @@ public class AuthController {
 
 
     @GetMapping("/logout")
+    @Operation(summary = "로그아웃", description = "유저의 refresh token을 지웁니다.",
+            parameters = {
+            @Parameter(
+                    name = "refreshToken",
+                    in = ParameterIn.COOKIE,
+                    schema = @Schema(implementation = String.class)
+            )
+    })
+    @SecurityRequirement(name = "Auth-token")
     public ResponseEntity logout (HttpServletRequest request, HttpServletResponse response) {
 
         try {
@@ -153,13 +189,6 @@ public class AuthController {
 
             return new ResponseEntity(errorBody, e.getHttpStatus());
         }
-    }
-
-
-    @GetMapping("/test")
-    public ResponseEntity returnTest(){
-        String responseBody = "test";
-        return ResponseEntity.ok(responseBody);
     }
 
     private static TokenDto getTokenDto(HttpServletRequest request){
@@ -185,11 +214,13 @@ public class AuthController {
         Cookie[] cookies = req.getCookies();
         if(cookies!=null) {
             for (Cookie cookie : cookies) {
+                log.info(cookie.getName());
                 if(cookie.getName().equals(name)) {
                     return cookie.getValue();
                 }
             }
         }
+        else log.info("cookie is null");
         return null;
     }
 }

@@ -26,6 +26,8 @@ public class JwtUtil {
             return false; // 토큰이 만료됨
         } catch (JwtException e) {
             return false; // 토큰이 유효하지 않음
+        } catch (IllegalArgumentException e){
+            return false; // 토큰이 유효하지 않음
         }
     }
 
