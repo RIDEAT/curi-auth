@@ -11,7 +11,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Arrays;
-
+// backend-app-service:8080
+// auth-app-service:8000
 /**
  * Swagger springdoc-ui 구성 파일
  */
