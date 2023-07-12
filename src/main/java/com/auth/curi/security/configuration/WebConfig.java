@@ -18,7 +18,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**") // Replace with your API endpoint pattern
                 .allowedOriginPatterns("*") // Replace with your allowed origin
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
-                .allowedHeaders("Content-Type")
+                .allowedHeaders("*")
                 .allowCredentials(true)
                 .exposedHeaders("Authorization")
                 .exposedHeaders("AuthToken")
