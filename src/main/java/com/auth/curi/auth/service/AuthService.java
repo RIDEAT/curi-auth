@@ -1,7 +1,9 @@
 package com.auth.curi.auth.service;
 
 import com.auth.curi.auth.repository.RefreshTokenRepository;
+import com.auth.curi.auth.repository.TokenRepository;
 import com.auth.curi.auth.repository.entity.RefreshToken;
+import com.auth.curi.auth.repository.entity.Token;
 import com.auth.curi.exception.CuriException;
 import com.auth.curi.exception.ErrorType;
 import com.auth.curi.security.dto.TokenDto;
@@ -32,6 +34,7 @@ public class AuthService {
     @Value("${jwt.refreshExpiredMs}")
     private Long refreshExpiredMs;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TokenRepository tokenRepository;
 
     public TokenDto authorize(String userId) {
         log.info("userId : {}", userId);
@@ -44,6 +47,17 @@ public class AuthService {
 
         log.info("userId : {} 가 만든 refreshJWT : {}", userId, refreshJWT);
 
+        Optional<Token> token = tokenRepository.findByUserId(userId);
+        if (token.isPresent()){
+            token.get().setAuthToken(authJWT);
+            token.get().setRefreshToken(refreshJWT);
+            tokenRepository.save(token.get());
+        } else{
+            Token newToken = Token.builder().authToken(authJWT).refreshToken(refreshJWT).userId(userId).build();
+            tokenRepository.save(newToken);
+        }
+
+        /*
         //refresh 토큰이 있는지 확인
         Optional<RefreshToken> refreshToken = refreshTokenRepository.findByUserId(userId);
 
@@ -55,7 +69,7 @@ public class AuthService {
         } else {
             RefreshToken newToken = new RefreshToken(refreshJWT, userId);
             refreshTokenRepository.save(newToken);
-        }
+        }*/
 
         return new TokenDto(authJWT, refreshJWT, userId);
     }
@@ -78,6 +92,26 @@ public class AuthService {
 
         String userId = JwtUtil.getUserId(refreshToken, refreshSecretKey);
 
+        Optional<Token> tokenInDB = tokenRepository.findByUserId(userId);
+        if (!tokenInDB.isPresent()){
+            log.info("등록된 refresh token이 없습니다. ");
+            throw new CuriException(HttpStatus.UNAUTHORIZED, ErrorType.TOKENS_NOT_VALID);
+        }
+
+        if (!tokenInDB.get().getRefreshToken().equals(refreshToken)){
+            log.info("등록된 refresh token과 현재 refresh token이 다릅니다.");
+            throw new CuriException(HttpStatus.UNAUTHORIZED, ErrorType.TOKENS_NOT_VALID);
+        }
+
+        log.info("refresh token은 유효합니다. : {}", refreshToken);
+        log.info("auth token을 발급합니다.");
+        String newAuthToken = JwtUtil.createJWT(userId, authSecretKey, authExpiredMs);
+
+        tokenInDB.get().setAuthToken(newAuthToken);
+        tokenRepository.save(tokenInDB.get());
+
+        /*
+
         // refresh 토큰이 이미 있는 놈이지도 확인해야함 디비에서
         Optional<RefreshToken> refreshTokenInDB = refreshTokenRepository.findByUserId(userId);
 
@@ -95,11 +129,14 @@ public class AuthService {
         log.info("auth token을 발급합니다.");
         String newAuthToken = JwtUtil.createJWT(userId, authSecretKey, authExpiredMs);
 
+         */
+
         return new TokenDto(newAuthToken, refreshToken, userId);
     }
 
-    public void deleteRefreshToken(String refreshToken){
+    public void deleteToken(String authToken){
 
+        /*
         if (!JwtUtil.isValid(refreshToken, refreshSecretKey)) {
             log.info("refresh token 이 유효하지 않습니다.");
             throw new CuriException(HttpStatus.UNAUTHORIZED, ErrorType.TOKENS_NOT_VALID);
@@ -117,9 +154,18 @@ public class AuthService {
             log.info("등록된 refresh token과 현재 refresh token이 다릅니다.");
             throw new CuriException(HttpStatus.UNAUTHORIZED, ErrorType.TOKENS_NOT_VALID);
         }
+*/
 
+        String userId = JwtUtil.getUserId(authToken, authSecretKey);
+        Optional<Token> tokenInDB = tokenRepository.findByUserId(userId);
+        if (!tokenInDB.isPresent()){
+            log.info("등록된 token이 없습니다.");
+            throw new CuriException(HttpStatus.UNAUTHORIZED, ErrorType.TOKENS_NOT_VALID);
+        }
+
+        tokenRepository.delete(tokenInDB.get());
         log.info("등록된 refresh token을 지웠습니다.");
-        refreshTokenRepository.delete(refreshTokenInDB.get());
+        //  refreshTokenRepository.delete(refreshTokenInDB.get());
 
     }
 }
