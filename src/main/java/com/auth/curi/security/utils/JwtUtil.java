@@ -9,7 +9,7 @@ import java.util.Date;
 public class JwtUtil {
 
     public static String getUserId(String token, String secretKey){
-        return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().get("userId", String.class);
+        return Jwts.parser().setSigningKey(secretKey.getBytes()).parseClaimsJws(token).getBody().get("userId", String.class);
     }
 
     public static boolean isValid(String token, String secretKey){
@@ -18,7 +18,7 @@ public class JwtUtil {
                 log.error("토큰이 null입니다.");
                 return false;
             }
-            return !Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getExpiration().before(new Date());
+            return !Jwts.parser().setSigningKey(secretKey.getBytes()).parseClaimsJws(token).getBody().getExpiration().before(new Date());
 
 
         } catch (ExpiredJwtException e) {
@@ -40,7 +40,7 @@ public class JwtUtil {
                 .setClaims(claims)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 100000 * expiredMs))
-                .signWith(SignatureAlgorithm.HS256, secretKey)
+                .signWith(SignatureAlgorithm.HS256, secretKey.getBytes())
                 .compact();
     }
 }

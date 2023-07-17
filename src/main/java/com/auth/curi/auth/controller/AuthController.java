@@ -33,7 +33,6 @@ import java.util.Map;
 
 @Controller
 @Slf4j
-@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Tag(name = "Auth Server", description = "Curi-Auth API Document")
 public class AuthController {
@@ -174,9 +173,11 @@ public class AuthController {
 
         try {
             TokenDto tokenFromRequest = getTokenDto(request);
+
             // Token 꺼내기
-            String refreshToken = tokenFromRequest.getRefreshToken();
-            authService.deleteRefreshToken(refreshToken);
+            String authToken = tokenFromRequest.getAuthToken();
+            //String refreshToken = tokenFromRequest.getRefreshToken();
+            authService.deleteToken(authToken);
 
             Map<String, Object> responseBody= new HashMap<>();
             responseBody.put("message", "성공적으로 logout 되었습니다.");
