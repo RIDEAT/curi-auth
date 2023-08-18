@@ -23,11 +23,6 @@ jobs:
           distribution: 'corretto'
           java-version: 17
 
-      - name: Set up application.properties
-        run: |
-          touch ./src/main/resources/application.properties
-          echo "${{ secrets.APPLICATION }}" > ./src/main/resources/application.properties
-
       - name: Set up serviceAccountKey.json
         id: create-json
         uses: jsdaniell/create-json@v1.2.2
