@@ -43,6 +43,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Test with Gradle
+        env:
+          ENVIRONMENT: build
         run: ./gradlew --info test
 
       - name: Publish Unit Test Results
