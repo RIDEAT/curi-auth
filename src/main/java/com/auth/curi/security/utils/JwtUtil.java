@@ -7,9 +7,8 @@ import java.util.Date;
 
 @Slf4j
 public class JwtUtil {
-
-    public static String getUserId(String token, String secretKey){
-        return Jwts.parser().setSigningKey(secretKey.getBytes()).parseClaimsJws(token).getBody().get("userId", String.class);
+    public static String getUserEmail(String token, String secretKey){
+        return Jwts.parser().setSigningKey(secretKey.getBytes()).parseClaimsJws(token).getBody().get("userEmail", String.class);
     }
 
     public static boolean isValid(String token, String secretKey){
@@ -31,10 +30,10 @@ public class JwtUtil {
         }
     }
 
-    public static String createJWT(String userId,String secretKey, Long expiredMs){
+    public static String createJWT(String userEmail,String secretKey, Long expiredMs){
         Claims claims = Jwts.claims();
 
-        claims.put("userId", userId);
+        claims.put("userEmail", userEmail);
 
         return Jwts.builder()
                 .setClaims(claims)

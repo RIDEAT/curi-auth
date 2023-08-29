@@ -36,24 +36,21 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final TokenRepository tokenRepository;
 
-    public TokenDto authorize(String userId) {
-        log.info("userId : {}", userId);
+    public TokenDto authorize(String userEmail) {
+        log.info("userEmail : {}", userEmail);
 
-        //make auth JWT
-        String authJWT = JwtUtil.createJWT(userId, authSecretKey, authExpiredMs);
+        String authJWT = JwtUtil.createJWT(userEmail, authSecretKey, authExpiredMs);
+        String refreshJWT = JwtUtil.createJWT(userEmail, refreshSecretKey, refreshExpiredMs);
 
-        //make refresh JWT
-        String refreshJWT = JwtUtil.createJWT(userId, refreshSecretKey, refreshExpiredMs);
+        log.info("userEmail : {} 가 만든 refreshJWT : {}", userEmail, refreshJWT);
 
-        log.info("userId : {} 가 만든 refreshJWT : {}", userId, refreshJWT);
-
-        Optional<Token> token = tokenRepository.findByUserId(userId);
+        Optional<Token> token = tokenRepository.findByUserEmail(userEmail);
         if (token.isPresent()){
             token.get().setAuthToken(authJWT);
             token.get().setRefreshToken(refreshJWT);
             tokenRepository.save(token.get());
         } else{
-            Token newToken = Token.builder().authToken(authJWT).refreshToken(refreshJWT).userId(userId).build();
+            Token newToken = Token.builder().authToken(authJWT).refreshToken(refreshJWT).userEmail(userEmail).build();
             tokenRepository.save(newToken);
         }
 
@@ -71,7 +68,7 @@ public class AuthService {
             refreshTokenRepository.save(newToken);
         }*/
 
-        return new TokenDto(authJWT, refreshJWT, userId);
+        return new TokenDto(authJWT, refreshJWT, userEmail);
     }
 
 
@@ -79,7 +76,7 @@ public class AuthService {
 
         if (JwtUtil.isValid(authToken, authSecretKey)) {
             log.info("auth token이 유효합니다.");
-            String userId = JwtUtil.getUserId(authToken, authSecretKey);
+            String userId = JwtUtil.getUserEmail(authToken, authSecretKey);
             return new TokenDto(authToken, refreshToken, userId);
         }
 
@@ -90,9 +87,8 @@ public class AuthService {
             throw new CuriException(HttpStatus.UNAUTHORIZED, ErrorType.TOKENS_NOT_VALID);
         }
 
-        String userId = JwtUtil.getUserId(refreshToken, refreshSecretKey);
-
-        Optional<Token> tokenInDB = tokenRepository.findByUserId(userId);
+        String userId = JwtUtil.getUserEmail(refreshToken, refreshSecretKey);
+        Optional<Token> tokenInDB = tokenRepository.findByUserEmail(userId);
         if (!tokenInDB.isPresent()){
             log.info("등록된 refresh token이 없습니다. ");
             throw new CuriException(HttpStatus.UNAUTHORIZED, ErrorType.TOKENS_NOT_VALID);
@@ -156,8 +152,8 @@ public class AuthService {
         }
 */
 
-        String userId = JwtUtil.getUserId(authToken, authSecretKey);
-        Optional<Token> tokenInDB = tokenRepository.findByUserId(userId);
+        String userEmail = JwtUtil.getUserEmail(authToken, authSecretKey);
+        Optional<Token> tokenInDB = tokenRepository.findByUserEmail(userEmail);
         if (!tokenInDB.isPresent()){
             log.info("등록된 token이 없습니다.");
             throw new CuriException(HttpStatus.UNAUTHORIZED, ErrorType.TOKENS_NOT_VALID);

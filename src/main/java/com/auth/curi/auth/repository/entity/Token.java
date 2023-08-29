@@ -23,13 +23,13 @@ public class Token {
     @NotBlank
     private String refreshToken;
     @NotBlank
-    private String userId;
+    private String userEmail;
 
     @Builder
-    public Token(String authToken, String refreshToken, String userId) {
+    public Token(String authToken, String refreshToken, String userEmail) {
         this.authToken = authToken;
         this.refreshToken = refreshToken;
-        this.userId = userId;
+        this.userEmail = userEmail;
     }
 
 }

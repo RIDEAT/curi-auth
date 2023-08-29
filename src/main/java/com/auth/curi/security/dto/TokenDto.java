@@ -16,13 +16,13 @@ public class TokenDto {
     private String authToken;
     @Schema(description = "refresh token")
     private String refreshToken;
-    @Schema(description = "user Id")
-    private String userId;
+    @Schema(description = "user Email")
+    private String userEmail;
 
 
-    public TokenDto(String authToken, String refreshToken, String userId){
+    public TokenDto(String authToken, String refreshToken, String userEmail){
         this.authToken = authToken;
         this.refreshToken = refreshToken;
-        this.userId = userId;
+        this.userEmail = userEmail;
     }
 }

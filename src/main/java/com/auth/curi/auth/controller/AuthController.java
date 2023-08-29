@@ -5,9 +5,14 @@ import com.auth.curi.auth.service.AuthService;
 import com.auth.curi.exception.CuriException;
 import com.auth.curi.exception.ErrorType;
 import com.auth.curi.firebase.FirebaseAuthentication;
+import com.auth.curi.security.dto.GoogleOAuthResponseDto;
+import com.auth.curi.security.dto.MemberInfoDto;
 import com.auth.curi.security.dto.TokenDto;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+import io.jsonwebtoken.impl.Base64UrlCodec;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -15,23 +20,24 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 
-@Controller
+@RestController
 @Slf4j
 @RequiredArgsConstructor
 @Tag(name = "Auth Server", description = "Curi-Auth API Document")
@@ -39,8 +45,68 @@ public class AuthController {
 
     private final AuthService authService;
 
+    private final String GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+    @Value("${oauth2.client.google.client-id}")
+    private String GOOGLE_CLIENT_ID;
+    @Value("${oauth2.client.google.client-secret}")
+    private String GOOGLE_CLIENT_SECRET;
+    @Value("${oauth2.client.google.redirect-uri}")
+    private String GOOGLE_CLIENT_REDIRECT_URI;
+    @GetMapping("/authorize/google")
+    public ResponseEntity authorizeGoogle(@RequestParam("code") String accessCode, HttpServletResponse response){
+
+        RestTemplate restTemplate = new RestTemplate();
+        Map<String, String> params = new HashMap<>();
+
+        params.put("code", accessCode);
+        params.put("client_id", GOOGLE_CLIENT_ID);
+        params.put("client_secret", GOOGLE_CLIENT_SECRET);
+        params.put("redirect_uri", GOOGLE_CLIENT_REDIRECT_URI);
+        params.put("grant_type", "authorization_code");
+
+        ResponseEntity<GoogleOAuthResponseDto> responseEntity = restTemplate.postForEntity(GOOGLE_TOKEN_URL, params, GoogleOAuthResponseDto.class);
+        if(responseEntity.getStatusCode() == HttpStatus.OK)
+        {
+            var decoded = decryptBase64UrlToken(responseEntity.getBody().getId_token().split("\\.")[1]);
+
+            ObjectMapper mapper = new ObjectMapper()
+                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            MemberInfoDto member = new MemberInfoDto();
+            try {
+                member = mapper.readValue(decoded, MemberInfoDto.class);
+            }catch (Exception e){
+                log.info(e.getMessage());
+            }
+
+            var userEmail = member.getEmail();
+            TokenDto tokenDto = authService.authorize(userEmail);
+
+            //userService.dbStore(userId, userEmail);
+            //이 부분은 user sever에서 auth server 로 물어볼때. 알려주자 .
+
+            // Put JWT in header
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("AuthToken", tokenDto.getAuthToken());
+
+            Cookie cookie = new Cookie("refreshToken", tokenDto.getRefreshToken());
+            //cookie.setMaxAge(refreshExpiredMs.intValue()/1000);
+            log.info("Cookie 에 담은 refreshToken: {}", tokenDto.getRefreshToken());
+            // cookie.setSecure(true);
+            cookie.setHttpOnly(true);
+            cookie.setPath("/");
+            response.addCookie(cookie);
+
+            Map<String, Object> responseBody= new HashMap<>();
+            responseBody.put("userEmail", userEmail);
+
+
+            return new ResponseEntity(responseBody, headers, HttpStatus.ACCEPTED);
+        }
+
+        return null;
+    }
     // firebase access token 이 valid 하면, auth 토큰과 refresh 토큰 발급
-    @GetMapping("/authorize")
+    @GetMapping("/authorize/firebase")
     @Operation(summary = "firebase access token 이 valid 하면, auth 토큰과 refresh 토큰 발급")
     @SecurityRequirement(name = "firebase-access-token")
     public ResponseEntity authorize(HttpServletRequest request, HttpServletResponse response){
@@ -58,10 +124,9 @@ public class AuthController {
             FirebaseToken decodedToken = FirebaseAuthentication.verifyAccessToken(accessToken);
 
             // 유효한 Access Token으로부터 사용자 정보 가져오기
-            String userId = decodedToken.getUid();
             String userEmail =decodedToken.getEmail();
 
-            TokenDto tokenDto = authService.authorize(userId);
+            TokenDto tokenDto = authService.authorize(userEmail);
 
 
             //userService.dbStore(userId, userEmail);
@@ -80,7 +145,6 @@ public class AuthController {
             response.addCookie(cookie);
 
             Map<String, Object> responseBody= new HashMap<>();
-            responseBody.put("userId", userId);
             responseBody.put("userEmail", userEmail);
 
 
@@ -141,8 +205,8 @@ public class AuthController {
             response.addCookie(cookie);
 
             Map<String, Object> responseBody= new HashMap<>();
-            String userId = tokenDto.getUserId();
-            responseBody.put("userId", userId);
+            String userEmail = tokenDto.getUserEmail();
+            responseBody.put("userEmail", userEmail);
 
             return new ResponseEntity(responseBody, HttpStatus.ACCEPTED);
 
@@ -223,5 +287,10 @@ public class AuthController {
         }
         else log.info("cookie is null");
         return null;
+    }
+
+    private String decryptBase64UrlToken(String jwtToken){
+        byte[] decode = new Base64UrlCodec().decode(jwtToken);
+        return new String(decode, StandardCharsets.UTF_8);
     }
 }
