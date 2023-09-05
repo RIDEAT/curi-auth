@@ -15,6 +15,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/health")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET")
+                .allowedHeaders("*")
+                .maxAge(3600);
+
         registry.addMapping("/**") // Replace with your API endpoint pattern
                 .allowedOriginPatterns("*") // Replace with your allowed origin
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
@@ -22,12 +28,6 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowCredentials(true)
                 .exposedHeaders("Authorization")
                 .exposedHeaders("AuthToken")
-                .maxAge(3600);
-
-        registry.addMapping("/health")
-                .allowedOriginPatterns("*")
-                .allowedMethods("GET")
-                .allowedHeaders("*")
                 .maxAge(3600);
     }
 
