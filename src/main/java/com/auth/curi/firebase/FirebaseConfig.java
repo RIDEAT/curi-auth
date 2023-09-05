@@ -1,6 +1,7 @@
 package com.auth.curi.firebase;
 
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PostConstruct;
@@ -12,10 +13,12 @@ import org.springframework.core.io.ClassPathResource;
 @Configuration
 public class FirebaseConfig {
 
+    @Value("${spring.firebase-json}")
+    private String activeProfile;
     @PostConstruct
     public void init(){
         try{
-            GoogleCredentials credentials = GoogleCredentials.fromStream(new ClassPathResource("serviceAccountKey.json").getInputStream());
+            GoogleCredentials credentials = GoogleCredentials.fromStream(new ClassPathResource(activeProfile).getInputStream());
 
             FirebaseOptions options = new FirebaseOptions.Builder()
                     .setCredentials(credentials)
