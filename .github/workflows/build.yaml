@@ -31,13 +31,13 @@ jobs:
           json: ${{ secrets.SERVICEACCOUNTKEY }}
           dir: "./src/main/resources/"
 
-      - name: Set up productionKey.json
-        id: create-json
+      - name: Set up serviceAccountKey.json
+        id: create-production-json
         uses: jsdaniell/create-json@v1.2.2
         with:
-         name: "productionKey.json"
-         json: ${{ secrets.PRODUCTIONSERVICEKEY }}
-         dir: "./src/main/resources/"
+          name: "productionKey.json"
+          json: ${{ secrets.PRODUCTIONSERVICEKEY }}
+          dir: "./src/main/resources/"
 
       - name: Cache Gradle packages
         uses: actions/cache@v2
