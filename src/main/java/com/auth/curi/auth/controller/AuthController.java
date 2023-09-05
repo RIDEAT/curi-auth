@@ -221,7 +221,10 @@ public class AuthController {
     }
 
 
-
+    @GetMapping("/health")
+    public ResponseEntity health(){
+        return new ResponseEntity(HttpStatus.OK);
+    }
 
     @GetMapping("/logout")
     @Operation(summary = "로그아웃", description = "유저의 refresh token을 지웁니다.",
