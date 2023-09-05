@@ -23,6 +23,12 @@ public class WebConfig implements WebMvcConfigurer {
                 .exposedHeaders("Authorization")
                 .exposedHeaders("AuthToken")
                 .maxAge(3600);
+
+        registry.addMapping("/health")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET")
+                .allowedHeaders("*")
+                .maxAge(3600);
     }
 
 }
