@@ -98,6 +98,7 @@ public class AuthController {
 
             Map<String, Object> responseBody= new HashMap<>();
             responseBody.put("userEmail", userEmail);
+            responseBody.put("name", member.getName());
 
 
             return new ResponseEntity(responseBody, headers, HttpStatus.ACCEPTED);
